@@ -3,25 +3,16 @@ import { Country, GameMode } from './types/game';
 import {
   ALL_COUNTRIES,
   DEFAULT_PRESET,
-  MATCHUP_PRESETS,
-  MatchupPreset,
-  getMegaWorldCountries,
+  getRandom4Countries,
   getRandom16Countries,
 } from './data/countries';
 import { GameBoard } from './components/GameBoard';
-import { BroadcastHeader } from './components/BroadcastHeader';
 import { LiveLeaderboard } from './components/LiveLeaderboard';
-import { StreamerControls } from './components/StreamerControls';
-import { CountryRouletteModal } from './components/CountryRouletteModal';
 import { CommentaryTicker } from './components/CommentaryTicker';
-import { RdpObsGuideModal } from './components/RdpObsGuideModal';
-import { CpanelHostingModal } from './components/CpanelHostingModal';
 import { commentator } from './utils/commentator';
-import { Sparkles, Radio, Package } from 'lucide-react';
 
 export default function App() {
   const [gameMode, setGameMode] = useState<GameMode>('classic_4');
-  const [selectedPreset, setSelectedPreset] = useState<MatchupPreset>(DEFAULT_PRESET);
 
   // Active participating countries
   const [countries, setCountries] = useState<Country[]>(() =>
@@ -30,42 +21,24 @@ export default function App() {
 
   const [matchNumber, setMatchNumber] = useState<number>(1);
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
-  const [simSpeed, setSimSpeed] = useState<number>(1.0);
-  const [autoRestart, setAutoRestart] = useState<boolean>(true);
-  const [restartDelay, setRestartDelay] = useState<number>(4);
-  const [spawnThresholdPercent, setSpawnThresholdPercent] = useState<number>(5);
-  const [randomDropsEnabled, setRandomDropsEnabled] = useState<boolean>(true);
-  const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
-  const [soundVolume, setSoundVolume] = useState<number>(0.5);
-  const [voiceEnabled, setVoiceEnabled] = useState<boolean>(true);
-  const [obsCleanMode, setObsCleanMode] = useState<boolean>(false);
-
-  // Modals
-  const [isRouletteOpen, setIsRouletteOpen] = useState<boolean>(false);
-  const [isRdpGuideOpen, setIsRdpGuideOpen] = useState<boolean>(false);
-  const [isCpanelGuideOpen, setIsCpanelGuideOpen] = useState<boolean>(false);
-
-  // Live match state
   const [territoryPercentages, setTerritoryPercentages] = useState<Record<string, number>>({});
   const [ballCounts, setBallCounts] = useState<Record<string, number>>({});
   const [eliminated, setEliminated] = useState<Record<string, boolean>>({});
   const [winner, setWinner] = useState<Country | null>(null);
 
-  // Win counts & history
+  // Win counts & match history
   const [winCounts, setWinCounts] = useState<Record<string, number>>({});
   const [history, setHistory] = useState<
     { matchNumber: number; winner: Country; duration: string }[]
   >([]);
 
-  // Manual ball injection trigger reference
-  const manualSpawnRef = useRef<((countryId: string) => void) | null>(null);
-
-  // Sync commentary voice setting
+  // Enable commentator voice automatically
   useEffect(() => {
-    commentator.setEnabled(voiceEnabled);
-  }, [voiceEnabled]);
+    commentator.setEnabled(true);
+    commentator.unlockAudio();
+  }, []);
 
-  // Match timer
+  // Match timer ticker
   useEffect(() => {
     const timer = setInterval(() => {
       setElapsedSeconds((prev) => prev + 1);
@@ -73,7 +46,7 @@ export default function App() {
     return () => clearInterval(timer);
   }, [matchNumber]);
 
-  // Handle switching game mode
+  // Handle switching between 4 Nations and 16 Nations World Royale
   const handleToggleMode = (newMode: GameMode) => {
     setGameMode(newMode);
     setMatchNumber((prev) => prev + 1);
@@ -83,50 +56,8 @@ export default function App() {
     if (newMode === 'mega_world') {
       setCountries(getRandom16Countries());
     } else {
-      setCountries(selectedPreset.countries.map((code) => ALL_COUNTRIES[code]));
+      setCountries(getRandom4Countries());
     }
-  };
-
-  // Handle Preset change
-  const handleSelectPreset = (preset: MatchupPreset) => {
-    setSelectedPreset(preset);
-    setGameMode('classic_4');
-    setCountries(preset.countries.map((code) => ALL_COUNTRIES[code]));
-    setMatchNumber((prev) => prev + 1);
-    setElapsedSeconds(0);
-    setWinner(null);
-  };
-
-  // Reset current match
-  const handleResetMatch = () => {
-    if (gameMode === 'mega_world') {
-      setCountries(getRandom16Countries());
-    }
-    setMatchNumber((prev) => prev + 1);
-    setElapsedSeconds(0);
-    setWinner(null);
-  };
-
-  // Trigger Country Roulette or 16-country World Draft
-  const handleTriggerRoulette = () => {
-    if (gameMode === 'mega_world') {
-      const new16 = getRandom16Countries();
-      setCountries(new16);
-      setMatchNumber((prev) => prev + 1);
-      setElapsedSeconds(0);
-      setWinner(null);
-    } else {
-      setIsRouletteOpen(true);
-    }
-  };
-
-  // When roulette finishes drafting 4 random countries
-  const handleRouletteComplete = (newSelected: Country[]) => {
-    setIsRouletteOpen(false);
-    setCountries(newSelected);
-    setMatchNumber((prev) => prev + 1);
-    setElapsedSeconds(0);
-    setWinner(null);
   };
 
   // Stats update callback from GameBoard
@@ -148,7 +79,7 @@ export default function App() {
     []
   );
 
-  // Round finish callback
+  // Round finish callback: record winner in history and win counts
   const handleRoundFinish = useCallback(
     (roundWinner: Country) => {
       setWinner(roundWinner);
@@ -169,189 +100,81 @@ export default function App() {
           duration: durationStr,
         },
       ]);
-
-      // Every match automatically select new countries when auto-restart is on
-      if (autoRestart) {
-        setTimeout(() => {
-          if (gameMode === 'mega_world') {
-            // Draft brand new 16 countries from all over the world
-            const fresh16 = getRandom16Countries();
-            setCountries(fresh16);
-            setMatchNumber((prev) => prev + 1);
-            setElapsedSeconds(0);
-            setWinner(null);
-          } else {
-            setIsRouletteOpen(true);
-          }
-        }, (restartDelay + 1) * 1000);
-      }
     },
-    [elapsedSeconds, matchNumber, gameMode, autoRestart, restartDelay]
+    [elapsedSeconds, matchNumber]
   );
 
-  // Manual ball spawn for streamer
-  const handleManualSpawnBall = (countryId: string) => {
-    if (manualSpawnRef.current) {
-      manualSpawnRef.current(countryId);
+  // Automatic match restart: triggers when victory countdown reaches 0
+  const handleNextMatch = useCallback(() => {
+    setElapsedSeconds(0);
+    setWinner(null);
+    setMatchNumber((prev) => prev + 1);
+
+    if (gameMode === 'mega_world') {
+      // Draft 16 fresh countries from across the world
+      setCountries(getRandom16Countries());
+    } else {
+      // Draft 4 fresh countries from across the world
+      setCountries(getRandom4Countries());
     }
-  };
+  }, [gameMode]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      {/* Broadcast Header */}
-      <BroadcastHeader
-        mode={gameMode}
-        onToggleMode={handleToggleMode}
-        matchNumber={matchNumber}
-        elapsedSeconds={elapsedSeconds}
-        countries={countries}
-        soundEnabled={soundEnabled}
-        onToggleSound={() => setSoundEnabled((prev) => !prev)}
-        voiceEnabled={voiceEnabled}
-        onToggleVoice={() => setVoiceEnabled((prev) => !prev)}
-        obsCleanMode={obsCleanMode}
-        onToggleObsMode={() => setObsCleanMode((prev) => !prev)}
-        onTriggerRoulette={handleTriggerRoulette}
-        onOpenRdpGuide={() => setIsRdpGuideOpen(true)}
-        onOpenCpanelGuide={() => setIsCpanelGuideOpen(true)}
-      />
+    <div className="h-[100dvh] w-screen overflow-hidden bg-slate-950 text-slate-100 flex flex-col md:flex-row p-1 sm:p-2 gap-1.5 sm:gap-2 font-sans select-none">
+      {/* 1. Battle Arena Grid (Full width on mobile, Full height on desktop) */}
+      <div className="w-full md:flex-1 h-auto md:h-full max-h-[50vh] sm:max-h-[54vh] md:max-h-none flex items-center justify-center shrink-0 min-h-0 relative">
+        <GameBoard
+          mode={gameMode}
+          countries={countries}
+          simSpeed={1.0}
+          spawnThresholdPercent={gameMode === 'mega_world' ? 2 : 5}
+          randomDropsEnabled={true}
+          soundEnabled={true}
+          soundVolume={0.7}
+          autoRestart={true}
+          restartCountdownSeconds={5}
+          onStatsUpdate={handleStatsUpdate}
+          onRoundFinish={handleRoundFinish}
+          matchNumber={matchNumber}
+          onNextMatch={handleNextMatch}
+        />
+      </div>
 
-      {/* Main Content Area - Maximized View on the Grid */}
-      <main className="flex-1 w-full max-w-7xl mx-auto p-2 sm:p-4 flex flex-col gap-4">
-        {/* Stream Banner Ticker (Clean & Informative) */}
-        <div className="w-full bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="font-bold text-slate-300">
-              {gameMode === 'mega_world' ? 'MEGA WORLD CLASH:' : 'BATTLE:'}
-            </span>
-            <span className="font-semibold text-slate-200">
-              {gameMode === 'mega_world'
-                ? `${countries.length} Nations Worldwide Fighting for World Domination`
-                : countries.map((c) => `${c.emoji} ${c.name}`).join('  vs  ')}
-            </span>
-          </div>
+      {/* 2. On Mobile: In between Battle Arena Grid and Territory Control */}
+      <div className="md:hidden w-full shrink-0">
+        <CommentaryTicker
+          voiceEnabled={true}
+          onToggleVoice={() => {}}
+          obsCleanMode={true}
+        />
+      </div>
 
-          <div className="flex items-center gap-3 text-slate-400">
-            {randomDropsEnabled && (
-              <div className="flex items-center gap-1 text-rose-400 font-semibold text-[11px]">
-                <Package className="w-3 h-3" />
-                <span>Drops Active: 💣 Bomb • ⚽ +2 Balls • ⚡ Speed</span>
-              </div>
-            )}
-            <div className="hidden sm:flex items-center gap-1 text-emerald-400 font-bold text-[11px]">
-              <Radio className="w-3 h-3" />
-              <span>24/7 AUTO-PILOT</span>
-            </div>
-          </div>
+      {/* 3. Territory Control Column (Bottom on mobile, Right on desktop) */}
+      <div className="w-full md:w-[320px] lg:w-[380px] flex-1 md:h-full flex flex-col gap-1.5 shrink-0 min-h-0 overflow-hidden">
+        {/* On Desktop: Live Caster sits at the top of the right panel, between Grid and Territory Control */}
+        <div className="hidden md:block shrink-0">
+          <CommentaryTicker
+            voiceEnabled={true}
+            onToggleVoice={() => {}}
+            obsCleanMode={true}
+          />
         </div>
 
-        {/* Battle Arena & Scoreboard Grid (Maximized for Arena View) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-          {/* Main Focus: Interactive Canvas GameBoard with Expanding Flags */}
-          <div
-            className={`${
-              obsCleanMode ? 'lg:col-span-9' : 'lg:col-span-8'
-            } flex flex-col items-center gap-2.5 w-full`}
-          >
-            <GameBoard
-              mode={gameMode}
-              countries={countries}
-              simSpeed={simSpeed}
-              spawnThresholdPercent={spawnThresholdPercent}
-              randomDropsEnabled={randomDropsEnabled}
-              soundEnabled={soundEnabled}
-              soundVolume={soundVolume}
-              autoRestart={autoRestart}
-              restartCountdownSeconds={restartDelay}
-              onStatsUpdate={handleStatsUpdate}
-              onRoundFinish={handleRoundFinish}
-              matchNumber={matchNumber}
-              onRegisterSpawnBall={(fn) => {
-                manualSpawnRef.current = fn;
-              }}
-            />
-
-            {/* Live AI Announcer Commentary Ticker & Subtitles */}
-            <CommentaryTicker
-              voiceEnabled={voiceEnabled}
-              onToggleVoice={() => setVoiceEnabled((prev) => !prev)}
-            />
-          </div>
-
-          {/* Right Column: Live Territory Control Scoreboard */}
-          <div
-            className={`${
-              obsCleanMode ? 'lg:col-span-3' : 'lg:col-span-4'
-            } flex flex-col gap-3 w-full`}
-          >
-            <LiveLeaderboard
-              mode={gameMode}
-              countries={countries}
-              territoryPercentages={territoryPercentages}
-              ballCounts={ballCounts}
-              eliminated={eliminated}
-              winner={winner}
-              history={history}
-              winCounts={winCounts}
-            />
-          </div>
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <LiveLeaderboard
+            mode={gameMode}
+            countries={countries}
+            territoryPercentages={territoryPercentages}
+            ballCounts={ballCounts}
+            eliminated={eliminated}
+            winner={winner}
+            history={history}
+            winCounts={winCounts}
+            obsCleanMode={true}
+            onToggleMode={handleToggleMode}
+          />
         </div>
-
-        {/* Streamer Controls Deck (Only visible when not in OBS clean mode) */}
-        {!obsCleanMode && (
-          <div className="mt-1">
-            <StreamerControls
-              mode={gameMode}
-              onSetMode={handleToggleMode}
-              simSpeed={simSpeed}
-              onSetSimSpeed={setSimSpeed}
-              autoRestart={autoRestart}
-              onToggleAutoRestart={() => setAutoRestart((prev) => !prev)}
-              restartDelay={restartDelay}
-              onSetRestartDelay={setRestartDelay}
-              randomDropsEnabled={randomDropsEnabled}
-              onToggleRandomDrops={() => setRandomDropsEnabled((prev) => !prev)}
-              selectedPreset={selectedPreset}
-              onSelectPreset={handleSelectPreset}
-              onTriggerRoulette={handleTriggerRoulette}
-              onResetMatch={handleResetMatch}
-              onManualSpawnBall={handleManualSpawnBall}
-              countries={countries}
-              spawnThresholdPercent={spawnThresholdPercent}
-              onSetSpawnThreshold={setSpawnThresholdPercent}
-              soundVolume={soundVolume}
-              onSetVolume={setSoundVolume}
-            />
-          </div>
-        )}
-      </main>
-
-      {/* Country Selection Roulette Animation Modal */}
-      <CountryRouletteModal
-        isOpen={isRouletteOpen}
-        onSelectionComplete={handleRouletteComplete}
-      />
-
-      {/* RDP & OBS Setup Guide Modal */}
-      <RdpObsGuideModal
-        isOpen={isRdpGuideOpen}
-        onClose={() => setIsRdpGuideOpen(false)}
-      />
-
-      {/* cPanel Website Hosting Guide Modal */}
-      <CpanelHostingModal
-        isOpen={isCpanelGuideOpen}
-        onClose={() => setIsCpanelGuideOpen(false)}
-      />
-
-      {/* Footer */}
-      <footer className="w-full border-t border-slate-900 bg-slate-950 py-3 px-6 text-center text-xs text-slate-500 select-none">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-1 text-[11px]">
-          <span>Flag Wars — Automated 24/7 Live Stream Game</span>
-          <span>Dynamic Flag Expansion • AI Live Commentary • 1080p OBS Ready</span>
-        </div>
-      </footer>
+      </div>
     </div>
   );
 }

@@ -5,11 +5,13 @@ import { Mic, Volume2, VolumeX, Sparkles, Zap } from 'lucide-react';
 interface CommentaryTickerProps {
   voiceEnabled: boolean;
   onToggleVoice: () => void;
+  obsCleanMode?: boolean;
 }
 
 export const CommentaryTicker: React.FC<CommentaryTickerProps> = ({
   voiceEnabled,
   onToggleVoice,
+  obsCleanMode = false,
 }) => {
   const [subtitle, setSubtitle] = useState<string>(
     'Flag Wars 24/7 Live Stream! Watch countries expand and battle for world domination!'
@@ -61,6 +63,26 @@ export const CommentaryTicker: React.FC<CommentaryTickerProps> = ({
     commentator.unlockAudio();
     commentator.speak('UNBELIEVABLE PLAY! Direct hit on the enemy frontier!', true, true);
   };
+
+  // OBS Clean Mode / Broadcast Ticker: Full subtitles, no truncation!
+  if (obsCleanMode) {
+    return (
+      <div className="w-full bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-xl px-2.5 py-1 sm:px-3 sm:py-1.5 flex items-center gap-2 text-xs select-none shadow-md">
+        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 text-[10px] font-black uppercase tracking-wider shrink-0 self-center">
+          <Mic
+            className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${
+              voiceEnabled ? 'text-emerald-400 animate-pulse' : 'text-slate-500'
+            }`}
+          />
+          <span>Live Caster</span>
+        </div>
+
+        <p className="text-[10px] sm:text-xs text-slate-100 font-medium italic flex-1 whitespace-normal break-words leading-tight">
+          "{subtitle}"
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-[760px] bg-slate-900/95 border border-slate-800 rounded-xl p-2.5 flex flex-col gap-2 text-xs select-none shadow-lg">

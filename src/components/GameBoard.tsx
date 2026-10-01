@@ -30,6 +30,7 @@ interface GameBoardProps {
   onRoundFinish: (winner: Country) => void;
   matchNumber: number;
   onRegisterSpawnBall?: (spawnFn: (countryId: string) => void) => void;
+  onNextMatch?: () => void;
 }
 
 const BALL_RADIUS = 13;
@@ -49,6 +50,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   onRoundFinish,
   matchNumber,
   onRegisterSpawnBall,
+  onNextMatch,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -390,6 +392,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({
               ball.x += (Math.random() - 0.5) * 0.3;
               ball.y += (Math.random() - 0.5) * 0.3;
             } else {
+              // Ensure ball has active velocity when returning from freeze
+              if (Math.hypot(ball.vx, ball.vy) < 1.0) {
+                const ang = Math.random() * Math.PI * 2;
+                ball.vx = Math.cos(ang) * BASE_SPEED;
+                ball.vy = Math.sin(ang) * BASE_SPEED;
+              }
+
               const currentBallSpeed = ball.supercharged ? stepSpeed * 1.5 : stepSpeed;
               ball.x += ball.vx * currentBallSpeed;
               ball.y += ball.vy * currentBallSpeed;
@@ -561,8 +570,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                       if (b.countryId !== ball.countryId) {
                         b.frozenUntil = time + freezeDuration;
                         b.freezeOwnerId = ball.countryId;
-                        b.vx = 0;
-                        b.vy = 0;
+                        if (Math.hypot(b.vx, b.vy) < 1.0) {
+                          const ang = Math.random() * Math.PI * 2;
+                          b.vx = Math.cos(ang) * BASE_SPEED;
+                          b.vy = Math.sin(ang) * BASE_SPEED;
+                        }
                       }
                     });
 
@@ -1018,7 +1030,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         if (autoRestart) {
           state.autoRestartCountdown -= dt;
           if (state.autoRestartCountdown <= 0) {
-            resetMatch();
+            state.roundEnded = false;
+            state.winner = null;
+            if (onNextMatch) {
+              onNextMatch();
+            } else {
+              resetMatch();
+            }
           }
         }
       }
@@ -1280,15 +1298,16 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     onStatsUpdate,
     resetMatch,
     spawnBallForCountry,
+    onNextMatch,
   ]);
 
   return (
-    <div className="relative flex items-center justify-center bg-slate-950 p-2.5 rounded-2xl shadow-2xl border border-slate-800 w-full max-w-[760px]">
+    <div className="relative flex items-center justify-center bg-slate-950 p-0 sm:p-1 rounded-xl shadow-2xl border border-slate-800/60 w-full h-full max-w-full aspect-square overflow-hidden">
       <canvas
         ref={canvasRef}
         width={720}
         height={720}
-        className="w-full aspect-square rounded-xl shadow-inner cursor-crosshair select-none"
+        className="w-full h-full max-w-full max-h-full aspect-square rounded-lg shadow-inner cursor-crosshair select-none object-contain block"
         onClick={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
           const scale = 720 / rect.width;
