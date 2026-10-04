@@ -28,7 +28,7 @@ jobs:
         run: npx esbuild server.ts --bundle --platform=node --packages=external --outfile=server.cjs
 
       - name: Compile Windows Standalone Executable (flag.exe)
-        run: npx pkg server.cjs --targets node18-win-x64 --output flag.exe
+        run: npx pkg . --targets node18-win-x64 --output flag.exe
 
       - name: Upload flag.exe Release Artifact
         uses: actions/upload-artifact@v4
