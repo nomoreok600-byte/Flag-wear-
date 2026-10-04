@@ -191,14 +191,38 @@ wss.on('connection', (ws: WebSocket, req) => {
   });
 });
 
-// Helper to automatically open default browser
+// Helper to open a native-feeling standalone application window
 function autoOpenBrowser(port: number) {
   const url = `http://localhost:${port}`;
-  const start = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
   try {
-    spawn(start, [url], { shell: process.platform === 'win32', stdio: 'ignore' });
+    if (process.platform === 'win32') {
+      const edgePath = path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Microsoft\\Edge\\Application\\msedge.exe');
+      const edgePathX86 = path.join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'Microsoft\\Edge\\Application\\msedge.exe');
+      
+      let exePath = '';
+      if (fs.existsSync(edgePath)) {
+        exePath = edgePath;
+      } else if (fs.existsSync(edgePathX86)) {
+        exePath = edgePathX86;
+      }
+
+      if (exePath) {
+        console.log(`🎮 Launching Standalone Game Window (Chromium App Mode)...`);
+        spawn(exePath, [`--app=${url}`, '--window-size=1280,720'], { detached: true, stdio: 'ignore' });
+      } else {
+        // Fallback to cmd-level Start App Mode
+        console.log(`🎮 Falling back to command-level App Mode...`);
+        spawn('cmd.exe', ['/c', `start msedge --app=${url} --window-size=1280,720`], { stdio: 'ignore' });
+      }
+    } else if (process.platform === 'darwin') {
+      console.log(`🎮 Launching Standalone Game Window on macOS...`);
+      spawn('open', ['-a', 'Google Chrome', '--args', `--app=${url}`], { stdio: 'ignore' });
+    } else {
+      console.log(`🎮 Launching Standard Browser on Linux...`);
+      spawn('xdg-open', [url], { stdio: 'ignore' });
+    }
   } catch (e: any) {
-    console.warn('Failed to auto-open web browser:', e.message);
+    console.warn('Failed to auto-open web browser in app mode:', e.message);
   }
 }
 
