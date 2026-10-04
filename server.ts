@@ -49,14 +49,14 @@ function ensureFFmpeg() {
   try {
     const psCommand = `
       $ProgressPreference = 'SilentlyContinue'
-      $url = "https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v4.4.1/ffmpeg-4.4.1-win-64.zip"
-      Write-Host "Downloading ffmpeg.zip from GitHub..."
-      Invoke-WebRequest -Uri $url -OutFile "ffmpeg.zip"
-      Write-Host "Extracting archive content..."
-      Expand-Archive -Path "ffmpeg.zip" -DestinationPath "." -Force
-      Write-Host "Cleaning up setup files..."
-      Remove-Item "ffmpeg.zip"
-      Write-Host "FFmpeg successfully installed and registered!"
+      $url = 'https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v4.4.1/ffmpeg-4.4.1-win-64.zip'
+      Write-Host 'Downloading ffmpeg.zip from GitHub...'
+      Invoke-WebRequest -Uri $url -OutFile 'ffmpeg.zip'
+      Write-Host 'Extracting archive content...'
+      Expand-Archive -Path 'ffmpeg.zip' -DestinationPath '.' -Force
+      Write-Host 'Cleaning up setup files...'
+      Remove-Item 'ffmpeg.zip'
+      Write-Host 'FFmpeg successfully installed and registered!'
     `;
     execSync(`powershell -Command "${psCommand.replace(/\n/g, '; ')}"`, { cwd: appDir, stdio: 'inherit' });
   } catch (e: any) {
