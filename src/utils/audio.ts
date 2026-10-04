@@ -3,6 +3,11 @@ class SoundEngine {
   private enabled: boolean = true;
   private volume: number = 0.65;
 
+  public getAudioContext(): AudioContext | null {
+    this.initCtx();
+    return this.ctx;
+  }
+
   private initCtx() {
     if (!this.ctx && typeof window !== 'undefined') {
       const AudioCtx =

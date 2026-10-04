@@ -328,10 +328,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
     let animationFrameId: number;
     let lastTime = performance.now();
+    let lastTickTime = performance.now();
     const cellW = canvas.width / gridCols;
     const cellH = canvas.height / gridRows;
 
-    const gameLoop = (time: number) => {
+    const gameLoop = (time: number, isBackup = false) => {
+      lastTickTime = performance.now();
       const dt = Math.min((time - lastTime) / 1000, 0.1);
       lastTime = time;
 
@@ -1277,13 +1279,25 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         ctx.restore();
       }
 
-      animationFrameId = requestAnimationFrame(gameLoop);
+      if (!isBackup) {
+        animationFrameId = requestAnimationFrame((t) => gameLoop(t, false));
+      }
     };
 
-    animationFrameId = requestAnimationFrame(gameLoop);
+    animationFrameId = requestAnimationFrame((t) => gameLoop(t, false));
+
+    // Watchdog fallback loop for background streaming (e.g. when RDP window is disconnected)
+    const backupIntervalId = setInterval(() => {
+      const now = performance.now();
+      if (now - lastTickTime > 150) {
+        // requestAnimationFrame has been throttled or suspended! Force a tick to keep stream alive.
+        gameLoop(now, true);
+      }
+    }, 100);
 
     return () => {
       cancelAnimationFrame(animationFrameId);
+      clearInterval(backupIntervalId);
     };
   }, [
     mode,
