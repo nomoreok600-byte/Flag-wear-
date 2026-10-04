@@ -25,7 +25,7 @@ jobs:
         run: npm run build
 
       - name: Bundle Full-Stack Server
-        run: npx esbuild server.ts --bundle --platform=node --outfile=server.cjs
+        run: npx esbuild server.ts --bundle --platform=node --packages=external --outfile=server.cjs
 
       - name: Compile Windows Standalone Executable (flag.exe)
         run: npx pkg server.cjs --targets node20-win-x64 --output flag.exe

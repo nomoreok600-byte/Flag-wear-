@@ -6,8 +6,8 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const _filename = typeof __filename !== 'undefined' ? __filename : fileURLToPath(import.meta.url);
+const _dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(_filename);
 
 const app = express();
 const server = http.createServer(app);
@@ -33,7 +33,7 @@ function ensureFFmpeg() {
   if (process.platform !== 'win32') return;
 
   const localFFmpeg = path.join(process.cwd(), 'ffmpeg.exe');
-  const dirnameFFmpeg = path.join(__dirname, 'ffmpeg.exe');
+  const dirnameFFmpeg = path.join(_dirname, 'ffmpeg.exe');
 
   if (fs.existsSync(localFFmpeg) || fs.existsSync(dirnameFFmpeg)) {
     console.log('✓ Found local ffmpeg.exe static binary!');
@@ -82,7 +82,7 @@ wss.on('connection', (ws: WebSocket, req) => {
 
   // Use local downloaded ffmpeg if available
   const localFFmpeg = path.join(process.cwd(), 'ffmpeg.exe');
-  const dirnameFFmpeg = path.join(__dirname, 'ffmpeg.exe');
+  const dirnameFFmpeg = path.join(_dirname, 'ffmpeg.exe');
   
   let ffmpegPath = 'ffmpeg';
   if (process.platform === 'win32') {
@@ -175,8 +175,8 @@ ensureFFmpeg();
 // Mount Vite or Serve Static Assets
 const PORT = Number(process.env.PORT || 3000);
 
-if (process.env.NODE_ENV === 'production' || fs.existsSync(path.join(__dirname, 'dist'))) {
-  const distPath = path.join(__dirname, 'dist');
+if (process.env.NODE_ENV === 'production' || fs.existsSync(path.join(_dirname, 'dist'))) {
+  const distPath = path.join(_dirname, 'dist');
   app.use(express.static(distPath));
   
   app.get('*', (req, res) => {
