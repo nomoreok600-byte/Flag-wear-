@@ -221,7 +221,7 @@ export default function App() {
 
     try {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/api/stream?streamKey=${encodeURIComponent(streamKey)}&rtmpUrl=${encodeURIComponent(streamUrl)}&bitrate=${bitrate}`;
+      const wsUrl = `${protocol}//${window.location.host}/api/stream?streamKey=${encodeURIComponent(streamKey)}&rtmpUrl=${encodeURIComponent(streamUrl)}&bitrate=${bitrate}&potatoMode=${isPotatoMode}`;
       
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;

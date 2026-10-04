@@ -73,6 +73,7 @@ wss.on('connection', (ws: WebSocket, req) => {
   const streamKey = urlParams.get('streamKey') || '';
   const rtmpUrl = urlParams.get('rtmpUrl') || 'rtmp://a.rtmp.youtube.com/live2';
   const bitrate = urlParams.get('bitrate') || '2500k';
+  const isPotato = urlParams.get('potatoMode') === 'true';
   
   if (!streamKey) {
     ws.send(JSON.stringify({ type: 'error', message: 'Missing Stream Key!' }));
@@ -81,7 +82,7 @@ wss.on('connection', (ws: WebSocket, req) => {
   }
 
   const rtmpDestination = `${rtmpUrl}/${streamKey}`;
-  console.log(`Spawning FFmpeg to stream to: ${rtmpUrl}/****`);
+  console.log(`Spawning FFmpeg to stream to: ${rtmpUrl}/**** (Potato Mode: ${isPotato})`);
 
   // Use local downloaded ffmpeg if available
   const localFFmpeg = path.join(appDir, 'ffmpeg.exe');
@@ -99,7 +100,7 @@ wss.on('connection', (ws: WebSocket, req) => {
   console.log(`Resolved FFmpeg executable path: ${ffmpegPath}`);
 
   // Spawn FFmpeg with dummy audio generator to ensure YT/RTMP has a valid audio stream
-  const ffmpeg = spawn(ffmpegPath, [
+  const ffmpegArgs = [
     '-loglevel', 'info',
     '-i', 'pipe:0',               // Input 0: Read WebM format from client stream stdin
     '-f', 'lavfi', 
@@ -107,20 +108,32 @@ wss.on('connection', (ws: WebSocket, req) => {
     '-c:v', 'libx264',           // H264 encoder
     '-preset', 'ultrafast',      // Ultrafast preset for minimum CPU on light RDP
     '-tune', 'zerolatency',      // Optimize for live broadcast zero latency
-    '-b:v', bitrate,             // Custom stream video bitrate
-    '-maxrate', bitrate,
-    '-bufsize', '4000k',
+  ];
+
+  if (isPotato) {
+    // Force downscale to 480x480 & frame-cap to 15fps output to slash CPU usage by 70%
+    ffmpegArgs.push('-vf', 'scale=480:480', '-r', '15');
+  } else {
+    ffmpegArgs.push('-vf', 'scale=720:720', '-r', '30');
+  }
+
+  ffmpegArgs.push(
+    '-b:v', isPotato ? '1200k' : bitrate, // Reduced bitrate for potato stream
+    '-maxrate', isPotato ? '1200k' : bitrate,
+    '-bufsize', '2400k',
     '-pix_fmt', 'yuv420p',
-    '-g', '60',                  // Smooth keyframe intervals (2 seconds at 30FPS)
-    '-c:a', 'aac',               // AAC audio codec
-    '-b:a', '128k',              // Clear audio stream bitrate
-    '-ar', '44100',              // High quality audio rate
-    '-map', '0:v',               // Use video from input 0
-    '-map', '1:a',               // Use silent audio from input 1
-    '-shortest',                 // Stop when video ends
-    '-f', 'flv',                 // FLV container for RTMP
+    '-g', isPotato ? '30' : '60',         // Appropriate keyframe intervals (2 seconds)
+    '-c:a', 'aac',                        // AAC audio codec
+    '-b:a', '96k',                        // Clean, ultra-light audio stream
+    '-ar', '44100',                       // High quality audio rate
+    '-map', '0:v',                        // Use video from input 0
+    '-map', '1:a',                        // Use silent audio from input 1
+    '-shortest',                         // Stop when video ends
+    '-f', 'flv',                         // FLV container for RTMP
     rtmpDestination
-  ]);
+  );
+
+  const ffmpeg = spawn(ffmpegPath, ffmpegArgs);
 
   ffmpeg.stdout.on('data', (data) => {
     console.log(`FFmpeg stdout: ${data}`);
