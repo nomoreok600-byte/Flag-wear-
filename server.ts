@@ -9,6 +9,9 @@ import { fileURLToPath } from 'url';
 const _filename = typeof __filename !== 'undefined' ? __filename : fileURLToPath(import.meta.url);
 const _dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(_filename);
 
+const isPackaged = typeof (process as any).pkg !== 'undefined';
+const appDir = isPackaged ? path.dirname(process.execPath) : process.cwd();
+
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ noServer: true });
@@ -32,7 +35,7 @@ server.on('upgrade', (request, socket, head) => {
 function ensureFFmpeg() {
   if (process.platform !== 'win32') return;
 
-  const localFFmpeg = path.join(process.cwd(), 'ffmpeg.exe');
+  const localFFmpeg = path.join(appDir, 'ffmpeg.exe');
   const dirnameFFmpeg = path.join(_dirname, 'ffmpeg.exe');
 
   if (fs.existsSync(localFFmpeg) || fs.existsSync(dirnameFFmpeg)) {
@@ -55,7 +58,7 @@ function ensureFFmpeg() {
       Remove-Item "ffmpeg.zip"
       Write-Host "FFmpeg successfully installed and registered!"
     `;
-    execSync(`powershell -Command "${psCommand.replace(/\n/g, '; ')}"`, { stdio: 'inherit' });
+    execSync(`powershell -Command "${psCommand.replace(/\n/g, '; ')}"`, { cwd: appDir, stdio: 'inherit' });
   } catch (e: any) {
     console.error('⚠️ Failed to auto-download FFmpeg binary via PowerShell:', e.message);
     console.log('Please ensure your RDP has internet access or place ffmpeg.exe manually in this folder.');
@@ -81,7 +84,7 @@ wss.on('connection', (ws: WebSocket, req) => {
   console.log(`Spawning FFmpeg to stream to: ${rtmpUrl}/****`);
 
   // Use local downloaded ffmpeg if available
-  const localFFmpeg = path.join(process.cwd(), 'ffmpeg.exe');
+  const localFFmpeg = path.join(appDir, 'ffmpeg.exe');
   const dirnameFFmpeg = path.join(_dirname, 'ffmpeg.exe');
   
   let ffmpegPath = 'ffmpeg';
@@ -174,8 +177,9 @@ ensureFFmpeg();
 
 // Mount Vite or Serve Static Assets
 const PORT = Number(process.env.PORT || 3000);
+const isProd = process.env.NODE_ENV === 'production' || isPackaged;
 
-if (process.env.NODE_ENV === 'production' || fs.existsSync(path.join(_dirname, 'dist'))) {
+if (isProd) {
   const distPath = path.join(_dirname, 'dist');
   app.use(express.static(distPath));
   
