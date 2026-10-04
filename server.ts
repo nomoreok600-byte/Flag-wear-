@@ -98,10 +98,12 @@ wss.on('connection', (ws: WebSocket, req) => {
 
   console.log(`Resolved FFmpeg executable path: ${ffmpegPath}`);
 
-  // Spawn FFmpeg to stream client WebM chunks directly to YouTube RTMP
+  // Spawn FFmpeg with dummy audio generator to ensure YT/RTMP has a valid audio stream
   const ffmpeg = spawn(ffmpegPath, [
     '-loglevel', 'info',
-    '-i', 'pipe:0',               // Read WebM format from client stream stdin
+    '-i', 'pipe:0',               // Input 0: Read WebM format from client stream stdin
+    '-f', 'lavfi', 
+    '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100', // Input 1: Silent dummy audio source
     '-c:v', 'libx264',           // H264 encoder
     '-preset', 'ultrafast',      // Ultrafast preset for minimum CPU on light RDP
     '-tune', 'zerolatency',      // Optimize for live broadcast zero latency
@@ -113,6 +115,9 @@ wss.on('connection', (ws: WebSocket, req) => {
     '-c:a', 'aac',               // AAC audio codec
     '-b:a', '128k',              // Clear audio stream bitrate
     '-ar', '44100',              // High quality audio rate
+    '-map', '0:v',               // Use video from input 0
+    '-map', '1:a',               // Use silent audio from input 1
+    '-shortest',                 // Stop when video ends
     '-f', 'flv',                 // FLV container for RTMP
     rtmpDestination
   ]);
@@ -145,8 +150,8 @@ wss.on('connection', (ws: WebSocket, req) => {
   });
 
   // Receive binary media recorder chunks from client browser
-  ws.on('message', (data, isBinary) => {
-    if (isBinary && ffmpeg.stdin.writable) {
+  ws.on('message', (data) => {
+    if (ffmpeg.stdin.writable) {
       ffmpeg.stdin.write(data);
     }
   });
@@ -172,6 +177,17 @@ wss.on('connection', (ws: WebSocket, req) => {
   });
 });
 
+// Helper to automatically open default browser
+function autoOpenBrowser(port: number) {
+  const url = `http://localhost:${port}`;
+  const start = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
+  try {
+    spawn(start, [url], { shell: process.platform === 'win32', stdio: 'ignore' });
+  } catch (e: any) {
+    console.warn('Failed to auto-open web browser:', e.message);
+  }
+}
+
 // Run automated FFmpeg static installer check
 ensureFFmpeg();
 
@@ -189,6 +205,7 @@ if (isProd) {
   
   server.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Fully Packaged Flag Wars Server running in PRODUCTION on http://localhost:${PORT}`);
+    autoOpenBrowser(PORT);
   });
 } else {
   // Mount Vite dynamically in Dev Mode
@@ -201,6 +218,7 @@ if (isProd) {
       
       server.listen(PORT, '0.0.0.0', () => {
         console.log(`🚀 Flag Wars Full-Stack Dev Server running on http://localhost:${PORT}`);
+        autoOpenBrowser(PORT);
       });
     });
   });
