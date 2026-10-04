@@ -143,6 +143,10 @@ wss.on('connection', (ws: WebSocket, req) => {
     ws.close();
   });
 
+  ffmpeg.stdin.on('error', (err: any) => {
+    console.error('FFmpeg stdin pipe error (handled safely):', err.message);
+  });
+
   ffmpeg.on('close', (code) => {
     console.log(`FFmpeg process exited with code ${code}`);
     ws.send(JSON.stringify({ type: 'stopped', message: `Stream closed (code ${code})` }));
@@ -152,14 +156,24 @@ wss.on('connection', (ws: WebSocket, req) => {
   // Receive binary media recorder chunks from client browser
   ws.on('message', (data) => {
     if (ffmpeg.stdin.writable) {
-      ffmpeg.stdin.write(data);
+      try {
+        ffmpeg.stdin.write(data, (err) => {
+          if (err) {
+            console.error('Handled error writing to FFmpeg stdin:', err.message);
+          }
+        });
+      } catch (err: any) {
+        console.error('Handled exception writing to FFmpeg stdin:', err.message);
+      }
     }
   });
 
   ws.on('close', () => {
     console.log('Client closed WebSocket, terminating FFmpeg stream...');
     try {
-      ffmpeg.stdin.end();
+      if (ffmpeg.stdin.writable) {
+        ffmpeg.stdin.end();
+      }
       ffmpeg.kill('SIGINT');
     } catch (e) {
       // Ignore

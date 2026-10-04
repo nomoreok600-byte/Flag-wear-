@@ -41,6 +41,9 @@ export default function App() {
   // ----------------------------------------------------
   const [showStreamPanel, setShowStreamPanel] = useState<boolean>(false);
   const [is916ShortsMode, setIs916ShortsMode] = useState<boolean>(true); // Default true for Shorts stream experience!
+  const [isPotatoMode, setIsPotatoMode] = useState<boolean>(() =>
+    localStorage.getItem('is_potato_mode') !== 'false'
+  );
   const [streamUrl, setStreamUrl] = useState<string>(() => 
     localStorage.getItem('rtmp_server_url') || 'rtmp://a.rtmp.youtube.com/live2'
   );
@@ -78,7 +81,8 @@ export default function App() {
     localStorage.setItem('rtmp_stream_key', streamKey);
     localStorage.setItem('stream_video_title', videoTitle);
     localStorage.setItem('stream_video_desc', videoDesc);
-  }, [streamUrl, streamKey, videoTitle, videoDesc]);
+    localStorage.setItem('is_potato_mode', String(isPotatoMode));
+  }, [streamUrl, streamKey, videoTitle, videoDesc, isPotatoMode]);
 
   // Handle stream ticker duration & audio bars animation
   useEffect(() => {
@@ -226,8 +230,9 @@ export default function App() {
         setStreamStatus('live');
         setStreamLog('Handshake success! Broadcasting active canvas to YouTube...');
         
-        // Capture game canvas element at 30 FPS
-        const stream = canvas.captureStream(30);
+        // Capture game canvas element (15 FPS on Potato Mode, 30 FPS on Standard)
+        const fps = isPotatoMode ? 15 : 30;
+        const stream = canvas.captureStream(fps);
 
         // Record chunks dynamically every 200ms
         const recorder = new MediaRecorder(stream, {
@@ -347,6 +352,7 @@ export default function App() {
             onRoundFinish={handleRoundFinish}
             matchNumber={matchNumber}
             onNextMatch={handleNextMatch}
+            potatoMode={isPotatoMode}
           />
         </div>
 
@@ -535,6 +541,22 @@ export default function App() {
                 className="w-4 h-4 rounded text-indigo-500 accent-indigo-500 cursor-pointer"
               />
             </div>
+
+            <div className="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800/80">
+              <div className="flex items-center gap-2">
+                <Cpu className="w-4 h-4 text-amber-400" />
+                <div className="text-left">
+                  <div className="text-[11px] font-bold text-slate-200">SaaS Potato Mode (120 FPS Boost)</div>
+                  <div className="text-[9px] text-slate-400">Zero-lag, ultra-lightweight high-performance grid</div>
+                </div>
+              </div>
+              <input 
+                type="checkbox"
+                checked={isPotatoMode}
+                onChange={(e) => setIsPotatoMode(e.target.checked)}
+                className="w-4 h-4 rounded text-indigo-500 accent-indigo-500 cursor-pointer"
+              />
+            </div>
           </div>
         </div>
 
@@ -616,6 +638,7 @@ export default function App() {
               onRoundFinish={handleRoundFinish}
               matchNumber={matchNumber}
               onNextMatch={handleNextMatch}
+              potatoMode={isPotatoMode}
             />
           </div>
 

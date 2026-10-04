@@ -31,6 +31,7 @@ interface GameBoardProps {
   matchNumber: number;
   onRegisterSpawnBall?: (spawnFn: (countryId: string) => void) => void;
   onNextMatch?: () => void;
+  potatoMode?: boolean;
 }
 
 const BALL_RADIUS = 13;
@@ -51,6 +52,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   matchNumber,
   onRegisterSpawnBall,
   onNextMatch,
+  potatoMode = false,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -145,20 +147,22 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         maxLife: 60,
       });
 
-      // Burst particles
-      for (let i = 0; i < 14; i++) {
-        const pAngle = (Math.PI * 2 * i) / 14;
-        const pSpeed = 2 + Math.random() * 3.5;
-        stateRef.current.particles.push({
-          x,
-          y,
-          vx: Math.cos(pAngle) * pSpeed,
-          vy: Math.sin(pAngle) * pSpeed,
-          color: country.primaryColor,
-          size: 3 + Math.random() * 3,
-          life: 0,
-          maxLife: 25,
-        });
+      // Burst particles (Bypassed in Potato Mode for speed!)
+      if (!potatoMode) {
+        for (let i = 0; i < 14; i++) {
+          const pAngle = (Math.PI * 2 * i) / 14;
+          const pSpeed = 2 + Math.random() * 3.5;
+          stateRef.current.particles.push({
+            x,
+            y,
+            vx: Math.cos(pAngle) * pSpeed,
+            vy: Math.sin(pAngle) * pSpeed,
+            color: country.primaryColor,
+            size: 3 + Math.random() * 3,
+            life: 0,
+            maxLife: 25,
+          });
+        }
       }
 
       soundEngine.playBallSpawn();
@@ -476,19 +480,21 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                       }
                     }
 
-                    for (let i = 0; i < 35; i++) {
-                      const ang = Math.random() * Math.PI * 2;
-                      const spd = 3 + Math.random() * 8;
-                      state.particles.push({
-                        x: drop.x,
-                        y: drop.y,
-                        vx: Math.cos(ang) * spd,
-                        vy: Math.sin(ang) * spd,
-                        color: country.primaryColor,
-                        size: 4 + Math.random() * 4,
-                        life: 0,
-                        maxLife: 30,
-                      });
+                    if (!potatoMode) {
+                      for (let i = 0; i < 35; i++) {
+                        const ang = Math.random() * Math.PI * 2;
+                        const spd = 3 + Math.random() * 8;
+                        state.particles.push({
+                          x: drop.x,
+                          y: drop.y,
+                          vx: Math.cos(ang) * spd,
+                          vy: Math.sin(ang) * spd,
+                          color: country.primaryColor,
+                          size: 4 + Math.random() * 4,
+                          life: 0,
+                          maxLife: 30,
+                        });
+                      }
                     }
 
                     state.floatingTexts.push({
@@ -580,20 +586,22 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                       }
                     });
 
-                    // Sparkling ice particle blast
-                    for (let i = 0; i < 45; i++) {
-                      const ang = Math.random() * Math.PI * 2;
-                      const spd = 2 + Math.random() * 8;
-                      state.particles.push({
-                        x: drop.x,
-                        y: drop.y,
-                        vx: Math.cos(ang) * spd,
-                        vy: Math.sin(ang) * spd,
-                        color: '#38bdf8',
-                        size: 3 + Math.random() * 4,
-                        life: 0,
-                        maxLife: 40,
-                      });
+                    // Sparkling ice particle blast (Bypassed in Potato Mode)
+                    if (!potatoMode) {
+                      for (let i = 0; i < 45; i++) {
+                        const ang = Math.random() * Math.PI * 2;
+                        const spd = 2 + Math.random() * 8;
+                        state.particles.push({
+                          x: drop.x,
+                          y: drop.y,
+                          vx: Math.cos(ang) * spd,
+                          vy: Math.sin(ang) * spd,
+                          color: '#38bdf8',
+                          size: 3 + Math.random() * 4,
+                          life: 0,
+                          maxLife: 40,
+                        });
+                      }
                     }
 
                     state.floatingTexts.push({
@@ -649,7 +657,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                     normalY += dy > 0 ? 1 : -1;
                   }
 
-                  if (Math.random() < 0.3) {
+                  if (!potatoMode && Math.random() < 0.3) {
                     state.particles.push({
                       x: cellCenterX,
                       y: cellCenterY,
@@ -932,24 +940,26 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           if (isUnderThreshold && !state.eliminated[country.id] && countries.length > 1) {
             state.eliminated[country.id] = true;
 
-            // Explode country balls
-            const dyingBalls = state.balls.filter((b) => b.countryId === country.id);
-            dyingBalls.forEach((b) => {
-              for (let i = 0; i < 25; i++) {
-                const ang = Math.random() * Math.PI * 2;
-                const spd = 3 + Math.random() * 7;
-                state.particles.push({
-                  x: b.x,
-                  y: b.y,
-                  vx: Math.cos(ang) * spd,
-                  vy: Math.sin(ang) * spd,
-                  color: country.primaryColor,
-                  size: 4 + Math.random() * 4,
-                  life: 0,
-                  maxLife: 35,
-                });
-              }
-            });
+            // Explode country balls (Bypassed in Potato Mode)
+            if (!potatoMode) {
+              const dyingBalls = state.balls.filter((b) => b.countryId === country.id);
+              dyingBalls.forEach((b) => {
+                for (let i = 0; i < 25; i++) {
+                  const ang = Math.random() * Math.PI * 2;
+                  const spd = 3 + Math.random() * 7;
+                  state.particles.push({
+                    x: b.x,
+                    y: b.y,
+                    vx: Math.cos(ang) * spd,
+                    vy: Math.sin(ang) * spd,
+                    color: country.primaryColor,
+                    size: 4 + Math.random() * 4,
+                    life: 0,
+                    maxLife: 35,
+                  });
+                }
+              });
+            }
             state.balls = state.balls.filter((b) => b.countryId !== country.id);
 
             // Clean Sweep: Absorb remaining stray tiles into the dominant leader
@@ -1069,27 +1079,34 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const timeSec = time * 0.001;
 
-      // 1. RENDER REALISTIC WAVING BACKGROUND FLAGS
-      if (mode === 'classic_4' && countries.length === 4) {
-        const halfW = canvas.width / 2;
-        const halfH = canvas.height / 2;
-        drawSectorBackgroundFlag(ctx, countries[0], 0, 0, halfW, halfH, timeSec);
-        drawSectorBackgroundFlag(ctx, countries[1], halfW, 0, halfW, halfH, timeSec);
-        drawSectorBackgroundFlag(ctx, countries[2], 0, halfH, halfW, halfH, timeSec);
-        drawSectorBackgroundFlag(ctx, countries[3], halfW, halfH, halfW, halfH, timeSec);
+      // 1. RENDER REALISTIC WAVING BACKGROUND FLAGS (Skipped in Potato Mode for 120 FPS Boost!)
+      if (!potatoMode) {
+        if (mode === 'classic_4' && countries.length === 4) {
+          const halfW = canvas.width / 2;
+          const halfH = canvas.height / 2;
+          drawSectorBackgroundFlag(ctx, countries[0], 0, 0, halfW, halfH, timeSec);
+          drawSectorBackgroundFlag(ctx, countries[1], halfW, 0, halfW, halfH, timeSec);
+          drawSectorBackgroundFlag(ctx, countries[2], 0, halfH, halfW, halfH, timeSec);
+          drawSectorBackgroundFlag(ctx, countries[3], halfW, halfH, halfW, halfH, timeSec);
+        } else {
+          const numColsDiv = Math.ceil(Math.sqrt(countries.length));
+          const numRowsDiv = Math.ceil(countries.length / numColsDiv);
+          const secW = canvas.width / numColsDiv;
+          const secH = canvas.height / numRowsDiv;
+          countries.forEach((country, idx) => {
+            const sCol = idx % numColsDiv;
+            const sRow = Math.floor(idx / numColsDiv);
+            drawSectorBackgroundFlag(ctx, country, sCol * secW, sRow * secH, secW, secH, timeSec);
+          });
+        }
       } else {
-        const numColsDiv = Math.ceil(Math.sqrt(countries.length));
-        const numRowsDiv = Math.ceil(countries.length / numColsDiv);
-        const secW = canvas.width / numColsDiv;
-        const secH = canvas.height / numRowsDiv;
-        countries.forEach((country, idx) => {
-          const sCol = idx % numColsDiv;
-          const sRow = Math.floor(idx / numColsDiv);
-          drawSectorBackgroundFlag(ctx, country, sCol * secW, sRow * secH, secW, secH, timeSec);
-        });
+        // Plain dark solid background for high-contrast visibility
+        ctx.fillStyle = '#090d16';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
 
-      // 2. RENDER EXPANDING FLAG TERRITORY WITH REALISTIC CLOTH SHIMMER
+      // 2. RENDER EXPANDING FLAG TERRITORY
+      ctx.globalAlpha = 0.88;
       for (let r = 0; r < gridRows; r++) {
         for (let c = 0; c < gridCols; c++) {
           const cellIndex = r * gridCols + c;
@@ -1100,24 +1117,43 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           const x = c * cellW;
           const y = r * cellH;
 
-          // Real cloth waving lighting offset
-          const waveLight = Math.sin(c * 0.16 + r * 0.12 + time * 0.0022) * 0.12;
+          if (potatoMode) {
+            // Potato Mode: Fill simple flat color - extreme performance boost!
+            ctx.fillStyle = owner.primaryColor;
+            ctx.fillRect(x, y, cellW, cellH);
+          } else {
+            // Quality Mode: Real cloth waving lighting offset
+            const waveLight = Math.sin(c * 0.16 + r * 0.12 + time * 0.0022) * 0.12;
+            ctx.save();
+            drawTerritoryCell(ctx, owner, x, y, cellW, cellH, c, r, waveLight);
+            ctx.restore();
+          }
+        }
+      }
+      ctx.globalAlpha = 1.0;
 
-          ctx.save();
-          ctx.globalAlpha = 0.88; // Blends with the waving background flag underneath
-          drawTerritoryCell(ctx, owner, x, y, cellW, cellH, c, r, waveLight);
-          ctx.restore();
+      // Draw Separating Hairline Grid in 1 Single Vector Stroke (Massive performance fix!)
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.07)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      for (let r = 1; r < gridRows; r++) {
+        ctx.moveTo(0, r * cellH);
+        ctx.lineTo(canvas.width, r * cellH);
+      }
+      for (let c = 1; c < gridCols; c++) {
+        ctx.moveTo(c * cellW, 0);
+        ctx.lineTo(c * cellW, canvas.height);
+      }
+      ctx.stroke();
 
-          // Subtle hairline grid separation
-          ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
-          ctx.lineWidth = 0.5;
-          ctx.strokeRect(x, y, cellW, cellH);
-
-          // Flash when newly conquered
+      // Draw Conquer Flashes
+      for (let r = 0; r < gridRows; r++) {
+        for (let c = 0; c < gridCols; c++) {
+          const cellIndex = r * gridCols + c;
           const flash = state.tileFlashes[cellIndex];
           if (flash > 0) {
-            ctx.fillStyle = `rgba(255, 255, 255, ${flash * 0.75})`;
-            ctx.fillRect(x, y, cellW, cellH);
+            ctx.fillStyle = `rgba(255, 255, 255, ${flash * 0.72})`;
+            ctx.fillRect(c * cellW, r * cellH, cellW, cellH);
           }
         }
       }
@@ -1130,7 +1166,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
           const avgX = centerData.sumX / centerData.count;
           const avgY = centerData.sumY / centerData.count;
           const pct = ((centerData.count) / totalCells) * 100;
-          drawTerritoryCenterEmblem(ctx, country, avgX, avgY, pct);
+          // In Potato Mode, only draw emblems for countries with > 3% area to prevent overlaps and overhead
+          if (!potatoMode || pct > 3) {
+            drawTerritoryCenterEmblem(ctx, country, avgX, avgY, pct);
+          }
         }
       });
 
@@ -1204,23 +1243,44 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         ctx.restore();
       });
 
-      // 7. Draw Country Balls (3D Spheres with Rolling Flag)
+      // 7. Draw Country Balls (Extreme Potato High-Speed Renderer)
       state.balls.forEach((ball) => {
         const country = countries.find((c) => c.id === ball.countryId);
         if (country) {
           const isFrozen = !!(ball.frozenUntil && ball.frozenUntil > time);
-          drawCountryBall(
-            ctx,
-            country,
-            ball.x,
-            ball.y,
-            ball.radius,
-            ball.rotation,
-            ball.vx,
-            ball.vy,
-            ball.supercharged,
-            isFrozen
-          );
+          
+          if (potatoMode) {
+            ctx.save();
+            // Crisp, simple 2D circle with no filter blurs or expensive gradients
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = isFrozen ? '#38bdf8' : country.primaryColor;
+            ctx.fill();
+            
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Direct flat text overlay
+            ctx.font = `bold ${Math.round(ball.radius * 1.15)}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(country.emoji, ball.x, ball.y);
+            ctx.restore();
+          } else {
+            drawCountryBall(
+              ctx,
+              country,
+              ball.x,
+              ball.y,
+              ball.radius,
+              ball.rotation,
+              ball.vx,
+              ball.vy,
+              ball.supercharged,
+              isFrozen
+            );
+          }
         }
       });
 
